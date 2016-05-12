@@ -1,0 +1,134 @@
+#!/usr/bin/python
+
+import os
+import sys
+import time
+import imp
+import subprocess
+
+# in seconds, how long the service waits to "wake up"
+sleep_time = 60
+
+# don't want to overload the system, so even if condor nodes are
+#  available, limit the total number of running processes to 10
+max_processes_to_run = 10
+
+max_condor_jobs_allowed = 250
+
+# function: get_machines_available()
+def get_machines_available():
+	proc = subprocess.Popen("condor_status -constraint 'OpSys == \"LINUX\" && Arch == \"X86_64\"' -t -avail", stdout=subprocess.PIPE, shell=True)
+	(out, err) = proc.communicate()
+	for comp in out.split():
+		if comp.isdigit():
+			return int(comp)
+	return 0
+
+class Movie():
+	# function: init()
+	def __init__(self):
+		self.fps = 10
+
+		# parse the config file to extract information about the job
+		f = open("job.conf", 'r')
+		self.job_id = f.readline().rstrip().split("\t")[1]
+		self.frame_prefix = f.readline().rstrip().split("\t")[1] 
+		self.pov_fn = f.readline().rstrip().split("\t")[1]
+
+		#skip line with incl_fs_count
+		line = f.readline()	
+
+		# include_fns has comma separated list of files
+		self.include_fns = f.readline().rstrip().split("\t")[1]
+		self.include_fns = self.include_fns[:-1]
+		self.num_frames = f.readline().rstrip().split("\t")[1]
+		self.width = f.readline().rstrip().split("\t")[1]
+		self.height = f.readline().rstrip().split("\t")[1]
+		self.email = f.readline().rstrip().split("\t")[1]
+
+	# function: run_one_frame()
+	# note: assumes that each frame of the data take approximately the 
+	#  same amount of time to render
+	# returns the time in seconds
+	def run_one_frame(self):
+		cmd = "povray +I" + self.pov_fn + " +Otemp.png +W" + self.width + " +H" + self.height
+		start = time.time()
+		status = os.system(cmd)
+		end = time.time()
+		os.system("rm temp.png")
+		return end - start
+
+# function: run_service()
+def run_service():
+	db_module = imp.load_source('JobsDatabase', '../db/db.py')
+	prev_machines = 0
+	next_job_to_run = ""
+	num_condor_jobs_needed = -1
+	while True:
+		# every time service wakes up, reload its database
+		db = db_module.JobsDatabase("../db/jobs.db")
+
+		# from database, determine how many processes are currently running
+		processes_running = db.get_num_jobs_in_status(db.status_str_to_num("RUNNING"))
+
+		processes_waiting = db.get_num_jobs_in_status(db.status_str_to_num("WAITING"))
+
+		# check the status of the condor pool
+		machines_avail = get_machines_available()
+		print str(machines_avail) + " machines available on condor"
+
+		# determine how many jobs to start
+		new_jobs_to_start = max_processes_to_run - processes_running
+
+		# start the jobs, if room for them on condor and not too
+		#  many processes already running
+		while processes_waiting > 0 and new_jobs_to_start > 0:
+			if next_job_to_run == "":
+				# get a new job to run -- note RUNNING status could mean next in queue
+				next_job_to_run = db.set_next_job_as_running()
+
+				# now, run one frame of this to see how many machines it will take
+				os.chdir("../jobs/" + next_job_to_run)
+				m = Movie()
+				one_frame_time = m.run_one_frame()
+				frames_per_job = 600/one_frame_time
+				num_condor_jobs_needed = int(int(m.num_frames) / frames_per_job) + 1 # round up
+				if num_condor_jobs_needed > max_condor_jobs_allowed:
+					num_condor_jobs_needed = max_condor_jobs_allowed
+				
+				# return to directory where started
+				os.chdir("../../check_jobs")
+		
+			# check if there are enough machines in the cluster to successfully run the 
+			#	new rendering
+			# also, leave ~50 machines free in the cluster
+			if num_condor_jobs_needed < machines_avail + 50:
+				# can run it!
+				# fork to the condor_povray job with job_id as arg
+				new_pid = os.fork()
+				if new_pid == 0:
+					# child process, so exec here
+					args = ("condor_povray", next_job_to_run, str(num_condor_jobs_needed))
+					os.execvp("../condor_povray/condor_povray", args)
+
+				# if not child process, continue here
+				print "starting job " + next_job_to_run 
+				machines_avail = machines_avail - num_condor_jobs_needed
+
+				# update the counts
+				processes_waiting = processes_waiting - 1
+				processes_running = processes_running + 1
+				new_jobs_to_start = new_jobs_to_start - 1 
+
+				next_job_to_run = ""
+			else:
+				print "cluster too busy to start another job"
+				break
+
+
+		# sleep for a period, then restart the loop to check again
+		time.sleep(sleep_time)
+
+## main ##
+if __name__ == "__main__":
+	run_service()

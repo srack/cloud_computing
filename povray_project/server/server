@@ -1,0 +1,132 @@
+#!/usr/bin/python
+
+import cherrypy
+import os
+import string
+import imp	# for importing database file
+
+## class: RenderForm ##
+class RenderForm(): 
+	def __init__(self, db):
+		self.db = db
+	
+	# function: index()
+	# description: returned on initial opening of the page, reads
+	#	index.html from this directory and sends it back to 
+	# 	the browser for display
+	@cherrypy.expose
+	def index(self):
+		f = open("index.html", 'r')
+		html = ""
+		for line in f:
+			html += line
+		return html	
+			
+	# function: submit_povray()
+	# description: handle to form submission for a povray rendering
+	#	job, see index.html for where this function is called
+	@cherrypy.expose
+	def submitted(self, pov_f, incl_f0, incl_f1, incl_f2, frame_prefix, num_frames, width, height, email):
+		# extract the email address to create a folder space for
+		#  that user
+		job_id = self.db.get_next_job_id_str()
+		d = "../jobs/" + job_id 
+		os.system("mkdir " + d)
+
+		# save the povray file  
+		self.save_file(d + "/" + pov_f.filename, pov_f.file)
+
+		# save any included file(s)
+		incl_fns = [""] * 3
+		if incl_f0 != None and len(incl_f0.filename) > 0:
+			incl_fns[0] = incl_f0.filename
+			self.save_file(d + "/" + incl_f0.filename, incl_f0.file)
+		if incl_f1 != None and len(incl_f1.filename) > 0:
+			incl_fns[1] = incl_f1.filename
+			self.save_file(d + "/" + incl_f1.filename, incl_f1.file)
+		if incl_f2 != None and len(incl_f2.filename) > 0:
+			incl_fns[2] = incl_f2.filename
+			self.save_file(d + "/" + incl_f2.filename, incl_f2.file)
+
+		if len(frame_prefix) == 0:
+			frame_prefix = "default"
+		
+		# create config file
+		self.create_config_file(d + "/job.conf", job_id, frame_prefix, pov_f.filename, incl_fns, num_frames, width, height, email)
+
+		# add the job to the database
+		self.db.create_job()
+
+                # return successful submission page to user
+		return self.successful_submission()
+
+	# function: save_file
+	# notes: assumes file does not eist at location fn
+	def save_file(self, fn, f_saving):
+		f = open(fn, 'w')
+		while True: 
+			data = f_saving.read(2048)
+			if not data:
+				break
+			f.write(data)
+		f.close()
+
+	# funtion: create_config_file
+	# notes: config_fn is in relation to the server's dir, pov and incl fns 
+	#	 in relation to job folder (so just filename, no path)
+	def create_config_file(self, config_fn, job_id, frame_prefix, pov_fn, incl_fns, num_frames, width, height, email):
+		# variables in config file are tab separated from their values and on separate lines
+		f = open(config_fn, 'w')
+		f.write("job_id\t" + job_id + "\n")
+		f.write("frame_prefix\t" + frame_prefix + "\n")
+		f.write("pov_fn\t" + pov_fn + "\n")
+		incl_fs_count = 0
+		for fn in incl_fns:
+			if fn == "":
+				break
+			incl_fs_count = incl_fs_count + 1
+		f.write("incl_fs_count\t" + str(incl_fs_count) + "\n")
+		if incl_fs_count > 0:
+			f.write("incl_fns\t")
+			for i in range(incl_fs_count):
+				f.write(incl_fns[i] + ",")
+				# note line will end in ',' but doesn't matter
+			f.write("\n")
+		f.write("num_frames\t" + str(num_frames) + "\n")
+		f.write("width\t" + str(width) + "\n")
+		f.write("height\t" + str(height) + "\n")
+		f.write("email\t" + str(email) + "\n")
+
+		f.close()
+
+
+	# function: successful_submission()
+	def successful_submission(self): 
+		f = open("success.html", 'r')
+		html = ""
+		for line in f:
+			html += line
+		return html	
+
+
+
+# function: start_service()
+# description: set up server environment with cherrypy library, only thing
+# 	needed to be run in main
+def start_service(db):
+	conf = {
+		'global': { 'server.socket_port': 41000, 
+			'server.socket_host': '127.0.0.1' },
+		'/': { 'tools.sessions.on': True, 
+			'tools.staticdir.root': os.path.abspath(os.getcwd())}, 
+		'/static': { 'tools.staticdir.on': True,
+			'tools.staticdir.dir': '.' }
+	}
+	cherrypy.quickstart(RenderForm(db), '/', conf)	
+
+## start main ##
+if __name__ == "__main__":
+	db_module = imp.load_source('JobsDatabase', '../db/db.py')
+	db = db_module.JobsDatabase("../db/jobs.db")
+
+	start_service(db)	

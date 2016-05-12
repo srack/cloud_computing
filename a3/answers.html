@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<div>
+	Samantha Rack <br>
+	Cloud Computing <br>
+	A3 Lab Report <br> <br>
+</div>
+
+<div>
+	<ol> 
+		<li> <b>Word Count</b><br> 
+		<br>
+		<a href="part1/wordcount_m0.py">mapper1</a>
+		<a href="part1/wordcount_r0.py">reducer1</a>
+		<a href="part1/wordcount_m1.py">mapper2</a>
+		<a href="part1/wordcount_r0.py">reducer2</a>
+		<a href="part1/1.sh">hadoop commands</a>
+		<br>
+		Top 10 most used words
+		<ol>
+			<li> class:   790001</li>
+			<li> href:    481791</li>
+			<li> http:    278002</li>
+			<li> span:    239303</li>
+			<li> menu:    178756</li>
+			<li> type:    152076</li>
+			<li> title:   149873</li>
+			<li> content: 135178</li>
+			<li> item:    134037</li>
+			<li> script:  116650</li>
+		</ol>
+		</li>
+		<br>
+		<li> <b>Bigrams</b>
+		<br>
+		<a href="part2/bigrams_m0.py">mapper1</a>
+		<a href="part2/bigrams_r0.py">reducer1</a>
+		<a href="part2/bigrams_m1.py">mapper2</a>
+		<a href="part2/bigrams_r1.py">reducer2</a>
+		<a href="part2/2.sh">hadoop commands</a>
+		<br>
+		Top 10 most used bigrams
+		<ol>
+			<li> href,http:       189904 </li>
+			<li> span,class:      117680 </li>
+			<li> menu,item:       77641 </li>
+			<li> type,text:       76763 </li>
+			<li> class,menu:      46702 </li>
+			<li> text,javascript: 44281 </li>
+			<li> span,span:       39546 </li>
+			<li> script,script:   38417 </li>
+			<li> script,type:     35868 </li>
+			<li> href,https:      33124 </li>
+		</ol>
+		</li>
+		<br>
+
+		<li> <b>Inverted Index</b>
+		<br>
+		<a href="part3/inverted_m0.py">mapper</a>
+		<a href="part3/inverted_r0.py">reducer</a>
+		<a href="part3/3.sh">hadoop commands</a>
+		<br>
+		First 10 results for 'dogs'
+		<ul>
+			<li> 'www.ccsf.cornell.edu', 'www.naoj.org', 'health.umn.edu', 'lccprojects.org', 'GeoBlog.psu.edu', 'www.shoppbs.org', 'www.universityofcalifornia.edu', 'www.ucsdguardian.org', 'studentblog.worldcampus.psu.edu', 'bti.cornell.edu' </li>
+		</ul>
+		</li>
+		<br>
+
+		<li> <b>Out-links</b>
+		<br>
+		<a href="part4/out_m0.py">mapper</a>
+		<a href="part4/out_r0.py">reducer</a>
+		<a href="part4/4.sh">hadoop commands</a>
+		<br>
+		All results for 'alumni.nd.edu'
+		<ul>
+			<li> 'prayercards.nd.edu', 'donate2.nd.edu', 'news.nd.edu', 'mynotredame.nd.edu', 'nd.edu', 'echoes.nd.edu', 'faith.nd.edu', 'supporting.nd.edu', 'my.nd.edu' </li>
+		</ul>
+		</li>
+		<br>
+
+		<li> <b>In-links</b>
+		<br>
+		<a href="part5/in_m0.py">mapper</a>
+		<a href="part5/in_r0.py">reducer</a>
+		<a href="part5/5.sh">hadoop commands</a>
+		<br>
+		First 10 results for 'nist.gov'
+		<ul>
+			<li> 'acetool.commerce.gov', 'chorusaccess.org', '2001-2009.commerce.gov', '2010-2014.commerce.gov', 'www.nehrp.gov', 'www.time.gov', 'nv1.nist.gov', 'tsapps.nist.gov', 'csrc.nist.gov', 'www.chorusaccess.org' </li>
+		</ul>
+		</li>
+		<br>
+
+		<li> <b>n-Links</b>
+		<br>
+		<a href="part6/nlinks_m0.py">mapper</a>
+		<a href="part6/nlinks_r0.py">reducer</a>
+		<a href="part6/6.py">hadoop commands</a>
+		<br>
+		Number of hosts connected at n-links:
+		<ol>
+			<li> 59 </li>
+			<li> 168 </li>
+			<li> 273 </li>
+			<li> 545 </li>
+			<li> 1163 </li>
+			<li> 1475 </li>
+			<li> 1620 </li>
+			<li> 1662 </li>
+			<li> 1708 </li>
+			<li> 1729 </li>
+			<li> 1741 </li>
+			<li> 1759 </li>
+		</ol>
+		It converges at the 13th round (last hosts are added during round 12) with 1759 hosts total.
+		</li>
+</div>
+</html>

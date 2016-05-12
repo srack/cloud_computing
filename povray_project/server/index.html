@@ -1,0 +1,56 @@
+<html>
+<head>
+	<title>Rendering Submission Form</title>
+	
+	<script>
+		function add_second_incl() {
+			document.getElementById("incl_1").style.display = "inline";
+		}
+		function add_third_incl() {
+			document.getElementById("incl_2").style.display = "inline";
+		}
+	</script>
+
+</head>
+
+<body>
+	<p id="title">Rendering Submission Form</p>
+
+	<div class="main">
+		<fieldset class="povray" id="povray_form">
+			<legend>POVRay</legend>
+			<form method="post" action="submitted" enctype="multipart/form-data">
+				File (.pov):
+				<input type="file" name="pov_f">
+				<br />
+				<div style="padding-left:8px;" id="additional_files"> 
+					Include File: 
+					<input type="file" name="incl_f0" oninput="add_second_incl()">
+					<br />
+					Include File:
+					<input type="file" name="incl_f1" oninput="add_third_incl()">
+					<br />
+					Include File:
+					<input type="file" name="incl_f2">
+				</div>
+				<br />
+				Prefix for Movie:
+				<input type="text" name="frame_prefix">
+				<br />
+				Number of Frames:
+				<input type="text" name="num_frames">
+				<br />
+				Resoultion:
+				<input type="text" name="width"> 
+				by
+				<input type="text" name="height">
+				<br />
+				Email Address:
+				<input type="text" name="email">
+				<br />
+				<input type="submit" value="Submit">
+			</form>
+		</fieldset>
+	</div>
+</body>
+</html>

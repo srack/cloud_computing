@@ -1,0 +1,21 @@
+#!/usr/bin/python
+
+import sys
+import os 
+
+# argv[1] = pov_fn
+# argv[2] = frame_prefix
+# argv[3] = start frame
+# argv[4] = total frames 
+# argv[5] = width
+# argv[6] = height
+if __name__ == "__main__":
+	cmd = "/afs/nd.edu/user37/ccl/software/external/povray/bin/povray"
+	args_begin = "+I" + sys.argv[1] + " +W" + sys.argv[5] + " +H" + sys.argv[6] + " +O" + sys.argv[2]
+
+	curr_frame = int(sys.argv[3])
+	while curr_frame < int(sys.argv[3]) + int(sys.argv[4]):
+		args = args_begin + str(curr_frame) + ".png -K" + str(curr_frame/10.0)
+		os.system(cmd + " " + args)
+		print "frame " + str(curr_frame) + " done")
+		curr_frame = curr_frame + 1

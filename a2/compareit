@@ -1,0 +1,136 @@
+#!/usr/bin/python
+
+import sys
+import os
+import heapq
+import work_queue as wq
+import re
+
+num_best_matches = 10
+port = 9997
+
+# sequence
+class Result():
+	def __init__(self, src, dest, score):
+		self.id0 = src
+		self.id1 = dest
+		self.score = score
+
+# main
+if __name__ == '__main__':
+	# check for validity of arguments
+	if len(sys.argv) != 2:
+		print "usage: ./compareit <file_for_searching_matches>" 
+		sys.exit(1)
+	else:
+		# can proceed
+		full_file = open(sys.argv[1], 'r')
+		label = -1
+
+		# create the queue
+		master = wq.WorkQueue(port)
+		master.specify_name("srack_dna")
+	
+		tasks_submitted = 0
+
+		# for each line in the file, create a task for that line and the
+		#  whole file to be compared
+		for line in full_file:
+			# in this initial for loop, will 
+			if line[0] == '>':
+				label = int(line[1:])
+			elif label == -1:
+				print "input file incorrectly formatted"
+				sys.exit(1)
+			else:
+				# create the file for this single line
+				small_file = open(str(label) + ".fasta.tmp", 'w')
+				small_file.write('>' + str(label) + '\n')
+				small_file.write(line)
+				small_file.close()
+
+				# create a task for that line against the whole file
+				t = wq.Task("swaligntool " + str(label) + ".fasta.tmp " + sys.argv[1]) 
+				t.specify_input_file(str(label) + ".fasta.tmp")
+				t.specify_input_file(sys.argv[1])
+				t.specify_input_file("swaligntool")
+				t.specify_directory("swalign", type = wq.WORK_QUEUE_INPUT, recursive = 1)
+				# submit it to the master
+				master.submit(t)
+				tasks_submitted = tasks_submitted + 1
+				# move to the next one				
+				label = -1
+
+		# at this point, all tasks have been submitted to master, but need workers
+		num_workers = 150 
+		os.system("condor_submit_workers -M srack_dna " + str(num_workers))	
+
+
+		# this heap will be used to keep track of the ten fastest
+		results_heap = []
+		tasks_completed = 0
+		while not master.empty(): # not finished getting tasks back
+			# wait for a task
+			#print str(tasks_completed) + " of " + str(tasks_submitted) + " tasks finished"
+			returnedTask = master.wait()
+			tasks_completed = tasks_completed + 1
+			# write the task's output to a file, so can be parsed by lines (more straightforward)
+			s = open("output.tmp", 'w')
+			s.write(returnedTask.output)
+			s.close()
+			id0 = -1
+			id1 = -1
+			score = -1
+			s = open("output.tmp", 'r')
+			# parse results of that task
+			for line in s:
+				if id0 == -1 and line.startswith("Query"):
+					id0 = int(re.split(r'[:,\s]+', line)[1])
+				if id1 == -1 and line.startswith("Ref"):
+					id1 = int(re.split(r'[:,\s]+', line)[1])
+				if line.startswith("Score"):
+					score = int(re.split(r'[:,\s]+', line)[1])
+					# check that the ids don't match each other
+					if id0 == id1:
+						#print "comparing to self"
+						id0 = -1
+						id1 = -1
+						continue
+					# check that that result is not worse than everything else in the full heap
+					if len(results_heap) == num_best_matches and score < results_heap[0][0]:
+						#print "score too small"
+						id0 = -1
+						id1 = -1
+						continue
+					# check that the id pair is not found elsewhere in the results heap
+					repeat = 0
+					for res in results_heap:
+						if (id0 == res[1].id1 and id1 == res[1].id0) or (id0 == res[1].id0 and id1 == res[1].id1):
+							repeat = 1
+							break
+					if repeat == 1:
+						#print "this is a repeat"
+						id0 = -1
+						id1 = -1
+						continue	
+				
+					# if it passes all of those checks, then push it into the heap
+					r = Result(id0, id1, score)
+					heapq.heappush(results_heap, (score, r))
+					#print 'added it'
+					if len(results_heap) > num_best_matches:
+						dummy = heapq.heappop(results_heap)
+					id0 = -1
+					id1 = -1
+			os.system("rm output.tmp")
+	os.system("rm *.tmp")
+
+	ordered = []
+	while results_heap:
+		ordered.append(heapq.heappop(results_heap)[1])
+		
+	print "\nTop Ten Matches:"
+	for r in reversed(ordered):
+		print "seq " + str(r.id0) + " matches seq " + str(r.id1) + " with a score of " + str(r.score)
+		
+

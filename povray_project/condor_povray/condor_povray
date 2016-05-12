@@ -1,0 +1,129 @@
+#!/usr/bin/python
+
+import sys
+import os
+import imp
+import subprocess
+import time 
+
+
+class Movie():
+	# function: init()
+	def __init__(self):
+		self.fps = 10
+
+		# parse the config file to extract information about the job
+		f = open("job.conf", 'r')
+		self.job_id = f.readline().rstrip().split("\t")[1]
+		self.frame_prefix = f.readline().rstrip().split("\t")[1] 
+		self.pov_fn = f.readline().rstrip().split("\t")[1]
+
+		#skip line with incl_fs_count
+		line = f.readline()	
+
+		# include_fns has comma separated list of files
+		self.include_fns = f.readline().rstrip().split("\t")[1]
+		self.include_fns = self.include_fns[:-1]
+		self.num_frames = f.readline().rstrip().split("\t")[1]
+		self.width = f.readline().rstrip().split("\t")[1]
+		self.height = f.readline().rstrip().split("\t")[1]
+		self.email = f.readline().rstrip().split("\t")[1]
+
+	# function: run_one_frame()
+	# note: assumes that each frame of the data take approximately the 
+	#  same amount of time to render
+	# returns the time in seconds
+	def run_one_frame(self):
+		cmd = "povray +I" + self.pov_fn + " +Otemp.png +W" + self.width + " +H" + self.height
+		start = time.time()
+		status = os.system(cmd)
+		end = time.time()
+		os.system("rm temp.png")
+		return end - start
+
+	# function: generate_submit_file()
+	def generate_submit_file(self, frames_per_job):
+		frames_done = 0		
+		break_this_time = False
+		submit_f = open(self.job_id + ".submit", 'w')
+
+		while True:
+			frames_to_do = frames_per_job
+			if frames_per_job > int(self.num_frames) - frames_done:
+				frames_to_do = int(self.num_frames) - frames_done 
+				break_this_time = True
+			submit_f.write("universe = vanilla\n")
+			submit_f.write("executable = pov_script\n")
+			submit_f.write("should_transfer_files = yes\n")
+			submit_f.write("when_to_transfer_output = on_exit\n")
+			submit_f.write("arguments = " + self.pov_fn + " " + self.frame_prefix + " " + str(frames_done) + " " + str(frames_to_do) + " " + str(self.width) + " " + str(self.height) + "\n")
+			submit_f.write("transfer_input_files = pov_script," + self.pov_fn)
+			if len(self.include_fns) > 0:
+				submit_f.write("," + self.include_fns)
+			submit_f.write("\n")
+			submit_f.write("out = " + self.job_id + ".out\n")
+			submit_f.write("log = " + self.job_id + ".log\n")
+			submit_f.write("queue\n")
+
+			frames_done = frames_done + frames_to_do
+			if break_this_time or frames_done == int(self.num_frames):
+				break
+		submit_f.close()
+
+	# function: run_submit_files()
+	def run_submit_files(self):
+		os.system("condor_submit " + self.job_id + ".submit")
+
+
+	# function: wait_for_jobs()
+	def wait_for_jobs(self):
+		os.system("condor_wait " + self.job_id + ".log")
+	
+	# function: build_movie()
+	def build_movie(self):
+		os.system("ffmpeg -r 10 -i " + self.frame_prefix + "%d.png -r ntsc movie.mpg")
+		os.system("rm " + self.frame_prefix + "*")
+		os.system("mv movie.mpg " + self.frame_prefix + ".mpg")		
+
+	# function: email_result()
+	def email_result(self):
+		# draft email
+
+		# either send result zipped up, or tell them where it is
+
+		return
+
+
+# main
+if __name__ == '__main__':
+	print "RUNNING JOB " + sys.argv[1] + " WITH " + sys.argv[2] + " CONDOR JOBS"
+	# copy the script to the jobs directory
+	os.system("cp ../condor_povray/pov_script ../jobs/" + sys.argv[1])
+	# change directories to get to the job's information
+	os.chdir("../jobs/" + sys.argv[1])
+	
+	db_module = imp.load_source('JobsDatabase', '../../db/db.py')
+	db = db_module.JobsDatabase("../../db/jobs.db")
+
+	num_condor_jobs_to_submit = int(sys.argv[2])
+
+	m = Movie()
+
+	frames_per_job = int(m.num_frames) / num_condor_jobs_to_submit
+
+	# create job files 
+	m.generate_submit_file(frames_per_job)	
+
+	# submit files and wait for completion
+	m.run_submit_files()
+	m.wait_for_jobs()
+
+	m.build_movie()
+
+	# update that the job is complete in the database
+	db.change_job_status(int(sys.argv[1]), db.status_str_to_num("DONE"))
+
+	os.system("rm pov_script")
+
+	# send the email 
+	m.email_result() 

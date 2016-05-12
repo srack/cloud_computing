@@ -1,0 +1,56 @@
+#!/usr/bin/python
+
+import sys
+import os
+
+# movie
+class Movie():
+	def __init__(self, frames, inFile, outFile, resW, resH):
+		self.num_frames = frames
+		self.fps = 10
+		self.povray_filename = inFile
+		self.movie_filename = outFile
+		self.submit_filename = self.movie_filename.split('.')[0] + ".submit"
+		self.width = resW
+		self.height = resH
+
+	def generate_submit_files(self):
+		# are we using one condor submit file with multiple jobs?
+		submit_file = open(self.submit_filename, 'w')
+		
+		# fill in file	
+		submit_file.write("universe = vanilla\n")
+		submit_file.write("executable = /afs/nd.edu/user37/ccl/software/external/povray/bin/povray\n")
+		submit_file.write("should_transfer_files = yes\n")
+		submit_file.write("when_to_transfer_output = on_exit\n")
+		submit_file.write("arguments = +I" + self.povray_filename + " +Oframe$(PROCESS).png +K$(PROCESS) +W" + str(self.width) + " +H" + str(self.height) + "\n")
+		submit_file.write("transfer_input_files = " + self.povray_filename + ", WRC_RubiksCube.inc\n")
+		submit_file.write("log = " + self.movie_filename.split('.')[0] + ".log\n")
+		submit_file.write("queue " + str(self.num_frames) + "\n")
+
+		submit_file.close()
+
+
+	def submit_jobs(self):
+		os.system("condor_submit " + self.submit_filename)
+
+	def create_movie(self):
+		# wait for all jobs to complete
+		os.system("condor_wait " + self.movie_filename.split('.')[0] + ".log")
+
+		# use ffmpeg to combine all frames together into a video
+		os.system("ffmpeg -r 10 -i frame%d.png -r ntsc " + self.movie_filename)
+
+		# delete frames 
+		os.system("rm frame*")
+# main
+if __name__ == '__main__':
+	# check for validity of arguments
+	if len(sys.argv) != 6 or os.path.splitext(sys.argv[1])[1] != '.pov' or os.path.splitext(sys.argv[2])[1] != '.mpg' or not sys.argv[3].isdigit() or not sys.argv[4].isdigit() or not sys.argv[5].isdigit():
+		print "Usage: condor_povray input.pov output.mpg numframes width height"
+	else:
+		# can create movie object
+		mov = Movie(int(sys.argv[3]), sys.argv[1], sys.argv[2], sys.argv[4], sys.argv[5])
+		mov.generate_submit_files()
+		mov.submit_jobs()
+		mov.create_movie()

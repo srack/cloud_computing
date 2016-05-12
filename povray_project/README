@@ -1,0 +1,6 @@
+To run the system:
+ - start the server process WITHIN the server folder
+ 	- it will run on localhost port 41000 by default
+ - start the check_jobs process WITHIN the check_jobs folder
+
+Note that the web interface does NO error checking on user input - this would be an ideal feature if it were to be deployed, but the system was sufficient without it for testing

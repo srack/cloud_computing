@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<div>
+	Samantha Rack <br>
+	Cloud Computing <br>
+	A1 Lab Report
+</div>
+
+<div>
+	<h3> Part 1 - Serially Rendering Frames </h4>
+
+	<table border=true>
+		<tr>
+			<th align=center> Resolution </th>
+			<th align=center> One Frame </th>
+			<th align=center> One Minute Video (600 Frames) </th>
+		</tr>
+		<tr>
+			<td align=center> 320x400 </td>
+			<td align=center> 16 sec </td>
+			<td align=center> 9600 sec (2 hr 40 min) </td>
+		</tr>
+		<tr>
+			<td align=center> 640x480 </td>
+			<td align=center> 39 sec </td>
+			<td align=center> 23400 sec (6.5 hr) </td>
+		</tr>
+		<tr>
+			<td align=center> 1280x720 </td>
+			<td align=center> 116 sec </td>
+			<td align=center> 69600 sec (19 hr 20 min) </td>
+		</tr>
+		<tr>
+			<td align=center> 1920x1080 </td>
+			<td align=center> 258 sec </td>
+			<td align=center> 154800 sec (43 hr) </td>
+		</tr>
+	</table>
+	
+</div>
+
+<div>
+	<h3> Part 2 - One Minute Video Generation Using Condor </h4>
+	<p> <a href="http://condorlog.cse.nd.edu/logs/ca/13/ca13a348257a41630904bf1edc073954/"> 320x400 </a> </p>
+	<p> <a href="http://condorlog.cse.nd.edu/logs/d2/a2/d2a23770f833b177694dea91cae49806"> 640x480 </a> </p>
+	<p> <a href="http://condorlog.cse.nd.edu/logs/4c/16/4c166f80744773b222a2ad0cd920eb79/"> 1280x720 </a> </p>
+	<p> <a href="http://condorlog.cse.nd.edu/logs/dd/2f/dd2fcd8a26c4f152d9c0977b134a9dac/"> 1920x1080 </a> </p>
+	<p> 
+		For each resolution of video, the log files indicated that all of the jobs were 
+		submitted immediately at the call of condor_submit. This finding is interesting since 
+		other example log analyses showed that jobs are submitted over time. This could be because
+		the overhead for setting up each of the jobs on Condor was relatively low; only two small
+		files had to be transferred so each of the submissions could be done quickly. <br> <br>
+		In the 320x400 resolution video, the log analysis indicates that about half of the ten minutes 
+		required for the jobs to complete was waiting time after they were submitted. After the first 
+		job was running, many more followed, and the peak number running was about 450. <br> <br>
+		With each of the other higher resolution video rendering jobs, the same trend is observed. 
+		The jobs begin running relatively quickly after submission, but after most of the jobs have 
+		completed, there is a large proportion of the total time that was needed to complete the final
+		few jobs. This trend is likely because each of the higher resolution jobs required much more
+		computation than the 320x400 renderings, thus jobs that were evicted while running would required
+		that time shown at the end of the log analysis graph. <br> <br>
+		In general, the jobs ran smoothly and without any unusual results (other than the lengthy tail of
+		the final few jobs finishing). I ran most of my jobs early in the morning when Condor was not largely
+		in use, so I think this contributed to allowing the jobs to run as expected.
+	</p>
+	
+</div>
+
+</body>
+</html>
